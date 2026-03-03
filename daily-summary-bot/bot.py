@@ -32,9 +32,8 @@ def load_config() -> dict:
         "eleven_api_key": os.getenv("ELEVEN_API_KEY"),
         "eleven_voice_id": os.getenv("ELEVEN_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb"),
         "eleven_model_id": os.getenv("ELEVEN_MODEL_ID", "eleven_multilingual_v2"),
-        "news_api_key": os.getenv("NEWS_API_KEY"),
-        "news_country": os.getenv("NEWS_COUNTRY", "us"),
-        "news_category": os.getenv("NEWS_CATEGORY", "general"),
+        "brave_api_key": os.getenv("BRAVE_API_KEY"),
+        "news_query": os.getenv("NEWS_QUERY", "top news today"),
         "news_max_articles": int(os.getenv("NEWS_MAX_ARTICLES", "5")),
         "sonos_speaker_name": os.getenv("SONOS_SPEAKER_NAME") or None,
         "summary_time": os.getenv("SUMMARY_TIME", "07:30"),
@@ -45,8 +44,8 @@ def load_config() -> dict:
         print("Error: ELEVEN_API_KEY is required. Set it in your .env file.")
         sys.exit(1)
 
-    if not config["news_api_key"]:
-        print("Error: NEWS_API_KEY is required. Set it in your .env file.")
+    if not config["brave_api_key"]:
+        print("Error: BRAVE_API_KEY is required. Set it in your .env file.")
         sys.exit(1)
 
     return config
@@ -62,10 +61,9 @@ def run_summary(config: dict) -> None:
     print("\n[1/3] Fetching today's top headlines...")
     try:
         articles = fetch_news(
-            api_key=config["news_api_key"],
-            country=config["news_country"],
-            category=config["news_category"],
-            max_articles=config["news_max_articles"],
+            api_key=config["brave_api_key"],
+            query=config["news_query"],
+            count=config["news_max_articles"],
         )
     except Exception as e:
         print(f"Error fetching news: {e}")

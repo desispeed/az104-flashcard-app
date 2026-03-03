@@ -1,4 +1,4 @@
-"""Fetch top news headlines from NewsAPI and build a spoken summary."""
+"""Fetch top news headlines from Brave Search API and build a spoken summary."""
 
 import os
 from datetime import datetime
@@ -6,33 +6,38 @@ from datetime import datetime
 import requests
 
 
-def fetch_news(api_key: str, country: str = "us", category: str = "general",
-               max_articles: int = 5) -> list[dict]:
-    """Fetch top headlines from NewsAPI.
+def fetch_news(api_key: str, query: str = "top news today",
+               count: int = 5) -> list[dict]:
+    """Fetch news articles from Brave Search API.
 
     Returns a list of article dicts with 'title', 'source', and 'description'.
     """
-    url = "https://newsapi.org/v2/top-headlines"
+    url = "https://api.search.brave.com/res/v1/news/search"
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": api_key,
+    }
     params = {
-        "apiKey": api_key,
-        "country": country,
-        "category": category,
-        "pageSize": max_articles,
+        "q": query,
+        "count": count,
+        "freshness": "pd",  # past day
     }
 
-    resp = requests.get(url, params=params, timeout=15)
+    resp = requests.get(url, headers=headers, params=params, timeout=15)
     resp.raise_for_status()
     data = resp.json()
 
-    if data.get("status") != "ok":
-        raise RuntimeError(f"NewsAPI error: {data.get('message', 'Unknown error')}")
-
     articles = []
-    for article in data.get("articles", []):
+    for result in data.get("results", []):
+        source = result.get("meta_url", {}).get("hostname", "Unknown")
+        # Clean up hostname to a readable source name
+        source = source.replace("www.", "").split(".")[0].title()
+
         articles.append({
-            "title": article.get("title", ""),
-            "source": article.get("source", {}).get("name", "Unknown"),
-            "description": article.get("description") or "",
+            "title": result.get("title", ""),
+            "source": source,
+            "description": result.get("description", ""),
         })
 
     return articles
