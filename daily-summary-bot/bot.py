@@ -2,12 +2,12 @@
 """Daily News Summary Sonos Bot.
 
 Fetches top news headlines, converts them to speech using ElevenLabs,
-and plays the audio on your Sonos speaker. Runs on a configurable daily schedule.
+and plays the audio on your Sonos speaker via Home Assistant or direct LAN.
 
 Usage:
     python bot.py              # Run once immediately, then schedule daily
     python bot.py --now        # Run once immediately and exit
-    python bot.py --list       # List available Sonos speakers
+    python bot.py --list       # List available speakers/entities and exit
     python bot.py --schedule   # Only run on schedule (skip immediate run)
 """
 
@@ -21,7 +21,6 @@ from dotenv import load_dotenv
 
 from news_fetcher import fetch_news, build_summary_text
 from tts_engine import generate_speech
-from sonos_player import discover_speaker, play_on_sonos, list_speakers
 
 
 def load_config() -> dict:
@@ -38,6 +37,10 @@ def load_config() -> dict:
         "sonos_speaker_name": os.getenv("SONOS_SPEAKER_NAME") or None,
         "summary_time": os.getenv("SUMMARY_TIME", "07:30"),
         "local_server_port": int(os.getenv("LOCAL_SERVER_PORT", "8765")),
+        # Home Assistant (optional - if set, uses HA instead of direct Sonos)
+        "ha_url": os.getenv("HA_URL") or None,
+        "ha_token": os.getenv("HA_TOKEN") or None,
+        "ha_media_player": os.getenv("HA_MEDIA_PLAYER") or None,
     }
 
     if not config["eleven_api_key"]:
@@ -49,6 +52,36 @@ def load_config() -> dict:
         sys.exit(1)
 
     return config
+
+
+def _use_ha(config: dict) -> bool:
+    """Check if Home Assistant is configured."""
+    return bool(config["ha_url"] and config["ha_token"] and config["ha_media_player"])
+
+
+def _play_via_ha(audio_path: str, config: dict) -> None:
+    """Play audio on Sonos through Home Assistant."""
+    from ha_player import play_on_ha
+
+    play_on_ha(
+        audio_file_path=audio_path,
+        ha_url=config["ha_url"],
+        ha_token=config["ha_token"],
+        media_player_entity=config["ha_media_player"],
+        port=config["local_server_port"],
+    )
+
+
+def _play_via_sonos(audio_path: str, config: dict) -> None:
+    """Play audio directly on Sonos via LAN."""
+    from sonos_player import discover_speaker, play_on_sonos
+
+    speaker = discover_speaker(config["sonos_speaker_name"])
+    play_on_sonos(
+        audio_file_path=audio_path,
+        speaker=speaker,
+        port=config["local_server_port"],
+    )
 
 
 def run_summary(config: dict) -> None:
@@ -94,14 +127,13 @@ def run_summary(config: dict) -> None:
         return
 
     # Step 3: Play on Sonos
-    print("\n[3/3] Playing on Sonos...")
+    via = "Home Assistant" if _use_ha(config) else "direct Sonos"
+    print(f"\n[3/3] Playing on Sonos (via {via})...")
     try:
-        speaker = discover_speaker(config["sonos_speaker_name"])
-        play_on_sonos(
-            audio_file_path=audio_path,
-            speaker=speaker,
-            port=config["local_server_port"],
-        )
+        if _use_ha(config):
+            _play_via_ha(audio_path, config)
+        else:
+            _play_via_sonos(audio_path, config)
     except Exception as e:
         print(f"Error playing on Sonos: {e}")
         return
@@ -122,18 +154,34 @@ def main():
     parser.add_argument("--schedule", action="store_true",
                         help="Only run on schedule (skip immediate run)")
     parser.add_argument("--list", action="store_true",
-                        help="List available Sonos speakers and exit")
+                        help="List available speakers/entities and exit")
     args = parser.parse_args()
 
     if args.list:
-        print("Searching for Sonos speakers...")
-        speakers = list_speakers()
-        if not speakers:
-            print("No Sonos speakers found on your network.")
+        load_dotenv()
+        ha_url = os.getenv("HA_URL")
+        ha_token = os.getenv("HA_TOKEN")
+
+        if ha_url and ha_token:
+            from ha_player import list_media_players
+            print("Fetching media players from Home Assistant...")
+            players = list_media_players(ha_url, ha_token)
+            if not players:
+                print("No media_player entities found.")
+            else:
+                print(f"\nFound {len(players)} media player(s):")
+                for p in players:
+                    print(f"  - {p['name']} ({p['entity_id']}) [{p['state']}]")
         else:
-            print(f"\nFound {len(speakers)} speaker(s):")
-            for s in speakers:
-                print(f"  - {s['name']} ({s['model']}) at {s['ip']}")
+            from sonos_player import list_speakers
+            print("Searching for Sonos speakers...")
+            speakers = list_speakers()
+            if not speakers:
+                print("No Sonos speakers found on your network.")
+            else:
+                print(f"\nFound {len(speakers)} speaker(s):")
+                for s in speakers:
+                    print(f"  - {s['name']} ({s['model']}) at {s['ip']}")
         return
 
     config = load_config()
