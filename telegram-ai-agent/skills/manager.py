@@ -23,12 +23,12 @@ class SkillManager:
                 continue
             path = os.path.join(self.skills_dir, fname)
             with open(path, "r") as f:
-                content = f.read()
+                content = f.read(20_000)  # cap skill size at 20KB
             name = fname[:-3]
             description = ""
             match = re.search(r"^#\s+(.+)", content, re.MULTILINE)
             if match:
-                description = match.group(1)
+                description = match.group(1)[:200]
             self.skills[name] = {
                 "name": name,
                 "description": description,
@@ -55,7 +55,11 @@ class SkillManager:
         ]
 
     def add_skill(self, name: str, content: str) -> str:
-        safe_name = re.sub(r"[^a-z0-9_-]", "_", name.lower())
+        # Limit total number of skills to prevent abuse
+        if len(self.skills) >= 50:
+            raise ValueError("Maximum skill limit (50) reached. Remove a skill first.")
+        safe_name = re.sub(r"[^a-z0-9_-]", "_", name.lower())[:60]
+        content = content[:20_000]  # cap content size
         path = os.path.join(self.skills_dir, f"{safe_name}.md")
         with open(path, "w") as f:
             f.write(content)

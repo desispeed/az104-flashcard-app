@@ -32,5 +32,8 @@ class Config:
     SANDBOX_MODE = os.getenv("SANDBOX_MODE", "true").lower() == "true"
     HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "30"))
 
+    RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+    RATE_LIMIT_MAX = int(os.getenv("RATE_LIMIT_MAX", "10"))
+
     MEMORY_DIR = os.getenv("MEMORY_DIR", "./memory")
     SKILLS_DIR = os.getenv("SKILLS_DIR", "./skills")

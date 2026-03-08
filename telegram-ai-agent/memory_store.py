@@ -11,6 +11,14 @@ import aiofiles
 from config import Config
 
 
+def _sanitize_text(text: str, max_len: int = 5000) -> str:
+    """Sanitize text stored in memory to prevent prompt injection via saved data."""
+    text = text[:max_len]
+    # Strip null bytes and control characters (except newlines/tabs)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+    return text
+
+
 class MemoryStore:
     def __init__(self):
         self.memory_dir = Config.MEMORY_DIR
@@ -49,7 +57,9 @@ class MemoryStore:
     # ── Facts / long-term memory ──
 
     async def save_fact(self, user_id: int, key: str, value: str):
-        safe_key = re.sub(r"[^a-z0-9_-]", "_", key.lower())
+        key = _sanitize_text(key, max_len=100)
+        value = _sanitize_text(value, max_len=5000)
+        safe_key = re.sub(r"[^a-z0-9_-]", "_", key.lower())[:60]
         path = os.path.join(self._user_dir(user_id, "facts"), f"{safe_key}.md")
         async with aiofiles.open(path, "w") as f:
             await f.write(f"# {key}\n\n{value}\n\n_Updated: {datetime.datetime.now().isoformat()}_\n")
@@ -66,7 +76,9 @@ class MemoryStore:
     # ── Preferences ──
 
     async def save_preference(self, user_id: int, key: str, value: str):
-        safe_key = re.sub(r"[^a-z0-9_-]", "_", key.lower())
+        key = _sanitize_text(key, max_len=100)
+        value = _sanitize_text(value, max_len=5000)
+        safe_key = re.sub(r"[^a-z0-9_-]", "_", key.lower())[:60]
         path = os.path.join(self._user_dir(user_id, "preferences"), f"{safe_key}.md")
         async with aiofiles.open(path, "w") as f:
             await f.write(f"# Preference: {key}\n\n{value}\n")

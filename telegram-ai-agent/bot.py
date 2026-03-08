@@ -14,8 +14,10 @@ Usage:
 """
 
 import argparse
+import collections
 import logging
 import sys
+import time
 
 from telegram import Update
 from telegram.ext import (
@@ -47,6 +49,33 @@ scheduler = TaskScheduler()
 
 # Wire scheduler into brain so AI tool calls can directly create/remove jobs
 brain.set_scheduler(scheduler)
+
+
+# ── Rate Limiting ──
+
+# Per-user sliding window: max RATE_LIMIT_MAX messages per RATE_LIMIT_WINDOW seconds
+RATE_LIMIT_WINDOW = Config.RATE_LIMIT_WINDOW
+RATE_LIMIT_MAX = Config.RATE_LIMIT_MAX
+_user_timestamps: dict[int, collections.deque] = {}
+
+
+def _is_rate_limited(user_id: int) -> bool:
+    """Check if a user has exceeded the message rate limit."""
+    now = time.monotonic()
+    if user_id not in _user_timestamps:
+        _user_timestamps[user_id] = collections.deque()
+
+    dq = _user_timestamps[user_id]
+
+    # Purge old entries outside the window
+    while dq and dq[0] < now - RATE_LIMIT_WINDOW:
+        dq.popleft()
+
+    if len(dq) >= RATE_LIMIT_MAX:
+        return True
+
+    dq.append(now)
+    return False
 
 
 # ── Auth ──
@@ -191,6 +220,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
+    # Rate limit check
+    if _is_rate_limited(user.id):
+        await update.message.reply_text(
+            f"Slow down — max {RATE_LIMIT_MAX} messages per {RATE_LIMIT_WINDOW}s. "
+            "Try again in a moment."
+        )
+        return
+
+    # Truncate excessively long messages to prevent abuse
+    if len(text) > 4000:
+        text = text[:4000] + "\n...(truncated)"
+
     await update.message.chat.send_action("typing")
 
     # The agentic loop runs inside brain.think() — it will call tools,
@@ -268,10 +309,26 @@ def main():
         print("Error: ANTHROPIC_API_KEY not set in .env")
         sys.exit(1)
 
+    # Security warnings
+    if not Config.ALLOWED_USERS:
+        logger.warning(
+            "WARNING: ALLOWED_USERS is empty — ANY Telegram user can control this bot "
+            "and execute commands on your machine! Set ALLOWED_USERS in .env to restrict access."
+        )
+    if not Config.SANDBOX_MODE:
+        logger.warning(
+            "WARNING: SANDBOX_MODE is disabled — the AI can execute ANY shell command. "
+            "This is dangerous if the bot is accessible to untrusted users."
+        )
+    if not Config.ENABLE_TASK_EXECUTION:
+        logger.info("Task execution is disabled — bot is in chat-only mode.")
+
     logger.info(
-        "Provider: %s | Model: %s",
+        "Provider: %s | Model: %s | Sandbox: %s | Users: %s",
         Config.AI_PROVIDER,
         Config.CLAUDE_MODEL if Config.AI_PROVIDER == "anthropic" else Config.OPENAI_MODEL,
+        "ON" if Config.SANDBOX_MODE else "OFF",
+        Config.ALLOWED_USERS if Config.ALLOWED_USERS else "ALL (unrestricted!)",
     )
 
     # Build app
