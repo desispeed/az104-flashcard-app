@@ -2,11 +2,11 @@
 """Telegram AI Agent — an OpenClaw-inspired personal AI assistant.
 
 A Telegram bot that acts as a proactive personal AI agent. It can:
-- Answer questions using Claude AI
-- Execute shell commands and manage files
+- Answer questions using Claude or any OpenAI-compatible model (Ollama, etc.)
+- Execute shell commands and manage files via agentic tool-use loop
 - Remember facts and preferences across conversations
 - Run scheduled tasks (cron jobs) and heartbeat checks
-- Load extensible skills from SKILL.md files
+- Learn new skills by creating SKILL.md files
 
 Usage:
     python bot.py              # Start the bot
@@ -14,12 +14,10 @@ Usage:
 """
 
 import argparse
-import json
 import logging
-import re
 import sys
 
-from telegram import Update, BotCommand
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -47,6 +45,9 @@ skill_manager = SkillManager()
 brain = AIBrain(memory, skill_manager)
 scheduler = TaskScheduler()
 
+# Wire scheduler into brain so AI tool calls can directly create/remove jobs
+brain.set_scheduler(scheduler)
+
 
 # ── Auth ──
 
@@ -64,23 +65,30 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Unauthorized.")
         return
 
+    provider = Config.AI_PROVIDER
+    model = Config.CLAUDE_MODEL if provider == "anthropic" else Config.OPENAI_MODEL
+
     await update.message.reply_text(
         f"Hey {user.first_name}! I'm your personal AI agent.\n\n"
+        f"_Provider: {provider} | Model: {model}_\n\n"
         "I can answer questions, run commands, manage files, remember things, "
-        "and run scheduled tasks — all through this chat.\n\n"
+        "schedule recurring tasks, and even learn new skills — all through this chat.\n\n"
+        "Just tell me what you need in plain language. Examples:\n"
+        '• "Check my disk space"\n'
+        '• "Remind me every weekday at 9am to check email"\n'
+        '• "Remember that my server IP is 10.0.0.5"\n'
+        '• "Create a skill for monitoring Docker containers"\n\n'
         "*Commands:*\n"
         "/start — This message\n"
         "/skills — List loaded skills\n"
         "/jobs — List scheduled jobs\n"
-        "/cron — Schedule a task (e.g. /cron daily\\_report 0 9 \\* \\* \\* Give me a morning briefing)\n"
+        "/cron — Schedule a task manually\n"
         "/rmjob — Remove a scheduled job\n"
         "/forget — Clear conversation history\n"
-        "/heartbeat — Toggle heartbeat checks\n\n"
-        "Or just send me a message and I'll help!",
+        "/heartbeat — Toggle heartbeat checks\n",
         parse_mode=ParseMode.MARKDOWN,
     )
 
-    # Start heartbeat for this user
     scheduler.start_heartbeat(user.id)
 
 
@@ -90,7 +98,8 @@ async def cmd_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     skills = skill_manager.list_skills()
     if not skills:
         await update.message.reply_text(
-            "No skills loaded. Add SKILL.md files to the `skills/` directory."
+            "No skills loaded. Add SKILL.md files to `skills/`, "
+            "or ask me to create one!"
         )
         return
     text = "*Loaded Skills:*\n" + "\n".join(
@@ -104,7 +113,10 @@ async def cmd_jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     jobs = scheduler.list_jobs(update.effective_user.id)
     if not jobs:
-        await update.message.reply_text("No scheduled jobs.")
+        await update.message.reply_text(
+            'No scheduled jobs. Say something like '
+            '"remind me every morning at 9 to check the news" to create one.'
+        )
         return
     text = "*Scheduled Jobs:*\n" + "\n".join(
         f"• `{j['id']}` — next: {j['next_run']}" for j in jobs
@@ -120,7 +132,8 @@ async def cmd_cron(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not args or len(args) < 7:
         await update.message.reply_text(
             "Usage: `/cron job_id min hour day month dow Your prompt here`\n"
-            "Example: `/cron morning 0 9 * * * Give me a morning news briefing`",
+            "Example: `/cron morning 0 9 * * * Give me a morning news briefing`\n\n"
+            "Or just tell me in plain English and I'll set it up!",
             parse_mode=ParseMode.MARKDOWN,
         )
         return
@@ -146,7 +159,9 @@ async def cmd_rmjob(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_forget(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update.effective_user.id):
         return
-    brain.conversation_cache.pop(update.effective_user.id, None)
+    user_id = update.effective_user.id
+    brain.conversation_cache.pop(user_id, None)
+    brain.conversation_cache.pop(f"openai_{user_id}", None)
     await update.message.reply_text("Conversation history cleared. Long-term memory preserved.")
 
 
@@ -167,7 +182,7 @@ async def cmd_heartbeat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle all non-command text messages."""
+    """Handle all non-command text messages — the main agentic entry point."""
     user = update.effective_user
     if not is_authorized(user.id):
         return
@@ -176,29 +191,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    # Show typing indicator
     await update.message.chat.send_action("typing")
 
-    # Get AI response
+    # The agentic loop runs inside brain.think() — it will call tools,
+    # inspect results, and iterate until the task is done.
     response = await brain.think(user.id, text)
 
-    # Check if AI wants to schedule a task
-    schedule_match = re.search(
-        r'"tool"\s*:\s*"schedule_task".*?"job_id"\s*:\s*"([^"]+)".*?'
-        r'"cron"\s*:\s*"([^"]+)".*?"prompt"\s*:\s*"([^"]+)"',
-        response, re.DOTALL,
-    )
-    if schedule_match:
-        job_id, cron_expr, prompt = schedule_match.groups()
-        result = scheduler.add_cron_job(user.id, job_id, cron_expr, prompt)
-        response += f"\n\n{result}"
-
-    # Split long messages (Telegram max is 4096 chars)
     for chunk in _split_message(response):
         try:
             await update.message.reply_text(chunk, parse_mode=ParseMode.MARKDOWN)
         except Exception:
-            # Fallback without markdown if parsing fails
             await update.message.reply_text(chunk)
 
 
@@ -210,7 +212,6 @@ def _split_message(text: str, max_len: int = 4000) -> list[str]:
         if len(text) <= max_len:
             chunks.append(text)
             break
-        # Try to split at newline
         idx = text.rfind("\n", 0, max_len)
         if idx == -1:
             idx = max_len
@@ -262,9 +263,16 @@ def main():
     if not Config.TELEGRAM_BOT_TOKEN:
         print("Error: TELEGRAM_BOT_TOKEN not set in .env")
         sys.exit(1)
-    if not Config.ANTHROPIC_API_KEY:
+
+    if Config.AI_PROVIDER == "anthropic" and not Config.ANTHROPIC_API_KEY:
         print("Error: ANTHROPIC_API_KEY not set in .env")
         sys.exit(1)
+
+    logger.info(
+        "Provider: %s | Model: %s",
+        Config.AI_PROVIDER,
+        Config.CLAUDE_MODEL if Config.AI_PROVIDER == "anthropic" else Config.OPENAI_MODEL,
+    )
 
     # Build app
     _app = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
