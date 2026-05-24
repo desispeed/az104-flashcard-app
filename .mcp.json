@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "az104-flashcards": {
+      "command": "node",
+      "args": ["mcp-server/server.js"]
+    }
+  }
+}
