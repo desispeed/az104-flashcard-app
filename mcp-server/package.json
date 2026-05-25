@@ -1,0 +1,21 @@
+{
+  "name": "az104-flashcards-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing the AZ-104 flashcard question bank as tools and resources.",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "az104-flashcards-mcp": "server.js"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  }
+}
