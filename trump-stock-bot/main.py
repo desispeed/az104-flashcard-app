@@ -2,8 +2,9 @@
 """Trump stock-mention tracker — CLI entrypoint.
 
 Examples:
+    python main.py --serve           # interactive bot + periodic scans (recommended)
     python main.py --once            # run a single scan and exit
-    python main.py --loop            # scan forever, every SCAN_INTERVAL_SECONDS
+    python main.py --loop            # scan forever, every SCAN_INTERVAL_SECONDS (no commands)
     python main.py --test-telegram   # send a test message to your chat
     python main.py --chat-id         # print chat ids that have messaged the bot
 """
@@ -76,6 +77,8 @@ def cmd_test_telegram(cfg) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Trump stock-mention tracker bot")
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--serve", action="store_true",
+                       help="interactive bot (responds to commands) + periodic scans")
     group.add_argument("--once", action="store_true", help="run one scan and exit")
     group.add_argument("--loop", action="store_true", help="scan repeatedly on an interval")
     group.add_argument("--test-telegram", action="store_true", help="send a test Telegram message")
@@ -90,6 +93,11 @@ def main() -> int:
         return cmd_chat_id(cfg)
     if args.test_telegram:
         return cmd_test_telegram(cfg)
+
+    if args.serve:
+        from src.bot import TelegramBot
+        TelegramBot(cfg).run()
+        return 0
 
     scanner = Scanner(cfg)
 

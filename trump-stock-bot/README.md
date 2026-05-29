@@ -75,9 +75,33 @@ python main.py --test-telegram  # sends a "connected!" message
 Run it:
 
 ```bash
-python main.py --once     # single scan (good for your own cron)
-python main.py --loop     # run forever, scanning every SCAN_INTERVAL_SECONDS
-python main.py --loop -v  # verbose
+python main.py --serve    # interactive bot + periodic scans (recommended)
+python main.py --once     # single scan, then exit (good for your own cron)
+python main.py --loop     # scan forever, no commands
+python main.py --serve -v # verbose
+```
+
+### Interactive Telegram commands (`--serve`)
+
+Talk to the bot in Telegram. Only **your** configured chat id can command it;
+messages from anyone else are ignored.
+
+| Command | Does |
+|---|---|
+| `/scan` | Run a scan right now |
+| `/watchlist` | List tracked companies |
+| `/add TICKER Name; alias1; alias2` | Start tracking a company (aliases optional) |
+| `/remove TICKER` | Stop tracking a company |
+| `/status` | Uptime, last/next scan, alert counts |
+| `/sources` | Which sources are enabled |
+| `/settings` | Current configuration |
+| `/help` | Command list |
+
+Watchlist edits via `/add` and `/remove` are persisted to
+`config/watchlist.json` and take effect immediately. Example:
+
+```
+/add PLTR Palantir; Palantir Technologies; Alex Karp
 ```
 
 For a system cron instead of `--loop`:
@@ -91,10 +115,14 @@ For a system cron instead of `--loop`:
 ## Run with Docker
 
 ```bash
-docker compose up -d --build      # builds and runs in the background (--loop)
+docker compose up -d --build      # builds and runs the interactive bot (--serve)
 docker compose logs -f            # watch it
 docker compose down               # stop
 ```
+
+The container runs `--serve`, so the bot responds to Telegram commands *and*
+scans on the interval. (Override the command in `docker-compose.yml` if you
+only want unattended scanning.)
 
 The `data/` dir is mounted as a volume so the de-dup DB survives restarts.
 `.env` is read via `env_file` and is **never** baked into the image.
@@ -143,5 +171,6 @@ The bot is **push-only** — no inbound ports are opened on the VM.
 ## Tests
 
 ```bash
-python tests/test_matcher.py      # no network needed
+python tests/test_matcher.py      # matcher / sentiment logic
+python tests/test_bot.py          # interactive command handling
 ```

@@ -67,19 +67,22 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.api = f"https://api.telegram.org/bot{token}"
 
-    def send(self, text: str) -> bool:
-        if not self.token or not self.chat_id:
+    def send(self, text: str, chat_id: str | None = None, markdown: bool = True) -> bool:
+        target = chat_id or self.chat_id
+        if not self.token or not target:
             log.warning("Telegram not configured; would have sent:\n%s", text)
             return False
+        payload = {
+            "chat_id": target,
+            "text": text,
+            "disable_web_page_preview": False,
+        }
+        if markdown:
+            payload["parse_mode"] = "Markdown"
         try:
             resp = requests.post(
                 f"{self.api}/sendMessage",
-                json={
-                    "chat_id": self.chat_id,
-                    "text": text,
-                    "parse_mode": "Markdown",
-                    "disable_web_page_preview": False,
-                },
+                json=payload,
                 timeout=20,
             )
             if resp.status_code != 200:

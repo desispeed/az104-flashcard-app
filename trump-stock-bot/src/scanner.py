@@ -20,6 +20,15 @@ class Scanner:
         self.matcher = Matcher(cfg.watchlist, cfg.bullish, cfg.bearish)
         self.notifier = notifier or TelegramNotifier(cfg.telegram_token, cfg.telegram_chat_id)
         self.store = store or SeenStore()
+        # Lightweight stats for the /status command.
+        self.last_scan_at = None
+        self.last_alert_count = 0
+        self.total_alerts = 0
+        self.scan_count = 0
+
+    def rebuild_matcher(self) -> None:
+        """Recreate the matcher after the watchlist/keywords change at runtime."""
+        self.matcher = Matcher(self.cfg.watchlist, self.cfg.bullish, self.cfg.bearish)
 
     def scan_once(self) -> list[Signal]:
         mentions = fetch_all(self.cfg)
@@ -42,6 +51,12 @@ class Scanner:
                     sent.append(sig)
                     log.info("alert: %s %s (%s) from %s",
                              sig.ticker, sig.direction, sig.confidence, sig.mention.source)
+
+        from .models import utcnow
+        self.last_scan_at = utcnow()
+        self.last_alert_count = len(sent)
+        self.total_alerts += len(sent)
+        self.scan_count += 1
 
         log.info("scan complete: %d new mentions, %d alerts sent", new_count, len(sent))
         return sent

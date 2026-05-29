@@ -9,4 +9,4 @@ services:
     volumes:
       # Keep the de-dup DB on the host so restarts don't re-alert old posts.
       - ./data:/app/data
-    # No inbound ports needed — this is a push-only bot.
+    # No inbound ports needed: commands arrive via Telegram long-polling (outbound).

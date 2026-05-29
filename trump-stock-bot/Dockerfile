@@ -25,5 +25,5 @@ COPY . .
 # Persist the de-dup database across restarts via a mounted volume.
 VOLUME ["/app/data"]
 
-# Run continuously, scanning on the interval from SCAN_INTERVAL_SECONDS.
-CMD ["python", "main.py", "--loop"]
+# Run the interactive bot (responds to commands) + periodic scanning.
+CMD ["python", "main.py", "--serve"]

@@ -56,6 +56,23 @@ def _load_json(path: Path) -> dict:
         return json.load(fh)
 
 
+def save_watchlist(companies: list[dict]) -> None:
+    """Persist watchlist changes made at runtime (e.g. via /add, /remove)."""
+    path = CONFIG_DIR / "watchlist.json"
+    existing = {}
+    try:
+        existing = _load_json(path)
+    except (OSError, json.JSONDecodeError):
+        pass
+    payload = {}
+    if existing.get("_comment"):
+        payload["_comment"] = existing["_comment"]
+    payload["companies"] = companies
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2)
+        fh.write("\n")
+
+
 def load_config() -> Config:
     watchlist = _load_json(CONFIG_DIR / "watchlist.json").get("companies", [])
     keywords = _load_json(CONFIG_DIR / "keywords.json")
