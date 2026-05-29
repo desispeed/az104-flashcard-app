@@ -1,0 +1,30 @@
+{
+  "_comment": "Companies the bot maps Trump mentions to. Add your own freely. 'aliases' are matched case-insensitively as whole words/phrases against post & article text. Keep aliases specific to avoid false positives.",
+  "companies": [
+    { "ticker": "DJT",  "name": "Trump Media & Technology Group", "aliases": ["Trump Media", "Truth Social", "DJT", "Trump Media & Technology"] },
+    { "ticker": "TSLA", "name": "Tesla",                          "aliases": ["Tesla", "Cybertruck", "Elon Musk"] },
+    { "ticker": "AAPL", "name": "Apple",                          "aliases": ["Apple", "iPhone", "Tim Cook"] },
+    { "ticker": "AMZN", "name": "Amazon",                         "aliases": ["Amazon", "Jeff Bezos"] },
+    { "ticker": "META", "name": "Meta Platforms",                 "aliases": ["Meta Platforms", "Facebook", "Instagram", "Mark Zuckerberg"] },
+    { "ticker": "GOOGL","name": "Alphabet (Google)",             "aliases": ["Google", "Alphabet", "Sundar Pichai"] },
+    { "ticker": "MSFT", "name": "Microsoft",                      "aliases": ["Microsoft", "Satya Nadella"] },
+    { "ticker": "NVDA", "name": "Nvidia",                         "aliases": ["Nvidia", "Jensen Huang"] },
+    { "ticker": "BA",   "name": "Boeing",                         "aliases": ["Boeing"] },
+    { "ticker": "F",    "name": "Ford",                           "aliases": ["Ford Motor", "Ford"] },
+    { "ticker": "GM",   "name": "General Motors",                 "aliases": ["General Motors", "GM"] },
+    { "ticker": "JPM",  "name": "JPMorgan Chase",                 "aliases": ["JPMorgan", "Jamie Dimon"] },
+    { "ticker": "GS",   "name": "Goldman Sachs",                  "aliases": ["Goldman Sachs"] },
+    { "ticker": "WMT",  "name": "Walmart",                        "aliases": ["Walmart"] },
+    { "ticker": "DIS",  "name": "Walt Disney",                    "aliases": ["Disney"] },
+    { "ticker": "KO",   "name": "Coca-Cola",                      "aliases": ["Coca-Cola", "Coca Cola", "Diet Coke"] },
+    { "ticker": "XOM",  "name": "ExxonMobil",                     "aliases": ["ExxonMobil", "Exxon"] },
+    { "ticker": "LMT",  "name": "Lockheed Martin",                "aliases": ["Lockheed Martin", "Lockheed"] },
+    { "ticker": "PFE",  "name": "Pfizer",                         "aliases": ["Pfizer"] },
+    { "ticker": "INTC", "name": "Intel",                          "aliases": ["Intel"] },
+    { "ticker": "TSM",  "name": "Taiwan Semiconductor",           "aliases": ["TSMC", "Taiwan Semiconductor"] },
+    { "ticker": "BABA", "name": "Alibaba",                        "aliases": ["Alibaba"] },
+    { "ticker": "NKE",  "name": "Nike",                           "aliases": ["Nike"] },
+    { "ticker": "T",    "name": "AT&T",                           "aliases": ["AT&T"] },
+    { "ticker": "PARA", "name": "Paramount",                      "aliases": ["Paramount"] }
+  ]
+}

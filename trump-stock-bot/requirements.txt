@@ -1,0 +1,6 @@
+requests>=2.31
+python-dotenv>=1.0
+# Optional — only needed for the Truth Social source.
+# If install fails or you don't want it, the bot still runs with the
+# Google News + GDELT sources and simply skips Truth Social.
+truthbrush>=0.2 ; python_version >= "3.9"

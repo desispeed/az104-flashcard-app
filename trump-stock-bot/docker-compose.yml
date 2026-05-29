@@ -1,0 +1,12 @@
+services:
+  trump-stock-bot:
+    build: .
+    image: trump-stock-bot:latest
+    container_name: trump-stock-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Keep the de-dup DB on the host so restarts don't re-alert old posts.
+      - ./data:/app/data
+    # No inbound ports needed — this is a push-only bot.
