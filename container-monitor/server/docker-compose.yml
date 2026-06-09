@@ -1,0 +1,17 @@
+services:
+  container-monitor:
+    build: .
+    image: container-monitor:latest
+    container_name: container-monitor
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      # SSH keys + known_hosts so DOCKER_HOST=ssh://... can authenticate.
+      # Read-only; the agent never needs to write here.
+      - ${HOME}/.ssh:/root/.ssh:ro
+      # If you also monitor the LOCAL daemon (a host with empty dockerHost),
+      # expose the socket too:
+      - /var/run/docker.sock:/var/run/docker.sock
