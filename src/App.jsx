@@ -1,368 +1,867 @@
-// Complete AZ-104 Exam Practice App
-// 250 Randomized Questions
-// React Component with Tailwind CSS
+// Personal Financial Management App
+// Dashboard, Transactions, Budgets & Savings Goals
+// React Component with Tailwind CSS — data persisted to localStorage
 
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, RotateCcw, BookOpen, CheckCircle, XCircle, Volume2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Wallet, LayoutDashboard, ArrowLeftRight, PiggyBank, Target, Plus, Trash2,
+  TrendingUp, TrendingDown, DollarSign, Pencil, X, Search, ChevronLeft,
+  ChevronRight, AlertTriangle, CheckCircle, Utensils, Home, Car, HeartPulse,
+  Film, ShoppingBag, GraduationCap, Lightbulb, Briefcase, Gift, Landmark, MoreHorizontal,
+} from 'lucide-react';
 
-// AZ-104 Questions Bank (250 Questions)
-const AZ104_QUESTIONS = [
-  // Azure Fundamentals & Architecture (1-30)
-  { id: 1, question: "Which of the following is a core benefit of Azure's availability zones?", options: ["Reduced latency between regions", "Protection against data center failures", "Lower storage costs", "Unlimited compute resources"], correct: 1, explanation: "Availability zones provide redundancy within a region to protect against data center outages." },
-  { id: 2, question: "You need to deploy resources across multiple Azure regions for disaster recovery. What is this strategy called?", options: ["Scale-out", "High availability", "Geo-redundancy", "Load balancing"], correct: 2, explanation: "Geo-redundancy involves deploying resources across geographically dispersed regions." },
-  { id: 3, question: "Which Azure service provides a globally distributed content delivery network?", options: ["Azure Load Balancer", "Azure CDN", "Azure Traffic Manager", "Azure Application Gateway"], correct: 1, explanation: "Azure CDN caches content at edge locations worldwide." },
-  { id: 4, question: "What is the primary purpose of resource groups in Azure?", options: ["To store data", "To manage and organize related resources", "To balance network traffic", "To encrypt data at rest"], correct: 1, explanation: "Resource groups are logical containers for organizing Azure resources." },
-  { id: 5, question: "You need to limit spending in Azure. Which tool should you use?", options: ["Azure Advisor", "Azure Cost Management + Billing", "Azure Monitor", "Azure Security Center"], correct: 1, explanation: "Azure Cost Management + Billing provides budgets and cost alerts." },
-  { id: 6, question: "What is an Azure subscription?", options: ["A VM instance", "A logical unit with billing and resource limits", "A storage account", "A security group"], correct: 1, explanation: "A subscription is a logical grouping for resources with separate billing." },
-  { id: 7, question: "Which service helps optimize Azure resource costs?", options: ["Azure DevOps", "Azure Advisor", "Azure Policy", "Azure Sentinel"], correct: 1, explanation: "Azure Advisor provides recommendations for cost optimization." },
-  { id: 8, question: "What does SLA stand for?", options: ["System Load Analyzer", "Service Level Agreement", "Secure Logging Access", "Storage Load Allocation"], correct: 1, explanation: "SLA defines uptime guarantees and credits for Azure services." },
-  { id: 9, question: "Which region provides the lowest latency for users in Europe?", options: ["West US", "North Europe", "South Africa North", "Australia East"], correct: 1, explanation: "North Europe is the regional datacenter closest to European users." },
-  { id: 10, question: "What is Azure Resource Manager (ARM)?", options: ["A VM service", "A management layer for deploying/managing resources", "A storage solution", "A networking tool"], correct: 1, explanation: "ARM is the deployment and management service for Azure resources." },
-
-  // Virtual Machines (31-60)
-  { id: 11, question: "What is the maximum number of network interfaces for Standard_D4s_v3?", options: ["1", "2", "4", "8"], correct: 2, explanation: "Standard_D4s_v3 supports up to 4 network interfaces." },
-  { id: 12, question: "To ensure a VM has same private IP after restart, you should configure?", options: ["Static public IP", "Dynamic IP", "Static private IP", "DNS zone"], correct: 2, explanation: "Static private IP ensures the VM's internal IP doesn't change." },
-  { id: 13, question: "Which disk type offers highest IOPS for Azure VMs?", options: ["Standard HDD", "Standard SSD", "Premium SSD", "Ultra SSD"], correct: 3, explanation: "Ultra SSD provides highest IOPS (up to 160,000)." },
-  { id: 14, question: "To create VM from organization image, use?", options: ["Azure Marketplace", "Managed image", "VHD file", "Snapshot"], correct: 1, explanation: "Managed images are generalized copies of VMs for creating new VMs." },
-  { id: 15, question: "What is Azure Bastion used for?", options: ["Monitor VM performance", "Provide secure RDP/SSH access without public IPs", "Back up VMs", "Encrypt VM disks"], correct: 1, explanation: "Azure Bastion enables secure shell and RDP access through Azure Portal." },
-  { id: 16, question: "What is a VM extension?", options: ["Additional disk space", "Post-deployment configuration tool", "Network interface", "Security group"], correct: 1, explanation: "Extensions provide post-deployment configuration for VMs." },
-  { id: 17, question: "How can you resize an Azure VM?", options: ["Stop it and change size", "Resize without stopping", "Create new VM", "Add disks"], correct: 0, explanation: "VMs must be stopped before resizing." },
-  { id: 18, question: "What is Azure Dedicated Host?", options: ["Shared server", "Physical server dedicated to one customer", "Virtual server", "Cloud service"], correct: 1, explanation: "Dedicated Hosts provide single-tenant physical servers." },
-  { id: 19, question: "Which tool backs up Azure VMs automatically?", options: ["Azure Storage", "Azure Backup", "Azure Files", "Azure CDN"], correct: 1, explanation: "Azure Backup provides automated VM backup." },
-  { id: 20, question: "What is the maximum vCPU limit per region for a subscription?", options: ["16", "32", "64", "Varies by VM size"], correct: 3, explanation: "vCPU limits vary by region and VM family." },
-
-  // Networking (61-90)
-  { id: 21, question: "What is the default size of subnet in /24 VNet?", options: ["128 addresses", "256 addresses", "512 addresses", "1024 addresses"], correct: 1, explanation: "A /24 subnet provides 256 total addresses, 251 usable." },
-  { id: 22, question: "To block traffic from specific IPs, use?", options: ["Network Security Group", "Azure Firewall", "Route table", "Virtual network gateway"], correct: 0, explanation: "NSGs filter network traffic using rules." },
-  { id: 23, question: "What is Network Watcher used for?", options: ["Filter traffic", "Monitor and diagnose networking", "Balance load", "Encrypt connections"], correct: 1, explanation: "Network Watcher monitors network performance and diagnoses issues." },
-  { id: 24, question: "To connect on-premises to Azure, use?", options: ["Azure Load Balancer", "Virtual Network Peering", "VPN Gateway or ExpressRoute", "Application Gateway"], correct: 2, explanation: "VPN Gateway for internet connectivity, ExpressRoute for private connections." },
-  { id: 25, question: "What is Azure Private Link?", options: ["Increase bandwidth", "Access services over private endpoints", "Load balance traffic", "Monitor VMs"], correct: 1, explanation: "Private Link enables secure access via private endpoints." },
-  { id: 26, question: "What does NSG stand for?", options: ["Network Security Gateway", "Network Service Group", "Network Security Group", "Network Storage Gateway"], correct: 2, explanation: "NSG filters network traffic to/from resources." },
-  { id: 27, question: "Maximum security rules per NSG?", options: ["50", "100", "200", "500"], correct: 2, explanation: "NSGs can have up to 200 security rules." },
-  { id: 28, question: "What is User Defined Route (UDR)?", options: ["Network security rule", "Custom routing rule", "NSG rule", "Firewall rule"], correct: 1, explanation: "UDRs define custom routing paths for network traffic." },
-  { id: 29, question: "Minimum VNet address space?", options: ["/32", "/30", "/28", "/16"], correct: 2, explanation: "VNets require minimum /28 address space." },
-  { id: 30, question: "What is network interface (NIC)?", options: ["Network storage", "Virtual network adapter", "Security group", "Firewall"], correct: 1, explanation: "NIC is a virtual network adapter connecting resources to VNet." },
-
-  // Storage (91-120)
-  { id: 31, question: "Highest availability replication type?", options: ["LRS", "ZRS", "GRS", "RA-GRS"], correct: 2, explanation: "GRS replicates to secondary region for disaster recovery." },
-  { id: 32, question: "For rarely accessed files, use tier?", options: ["Hot", "Cool", "Archive", "Premium"], correct: 2, explanation: "Archive tier is cheapest for infrequent access." },
-  { id: 33, question: "Azure Data Lake Storage is for?", options: ["VM disks", "Databases", "Big data analytics", "Web content"], correct: 2, explanation: "Data Lake stores massive amounts for analytics." },
-  { id: 34, question: "Best backup solution?", options: ["Azure Storage", "Azure Backup", "Azure Files", "Azure Blob"], correct: 1, explanation: "Azure Backup provides automated managed backups." },
-  { id: 35, question: "Maximum file size in Azure Files?", options: ["1 TB", "2 TB", "4 TB", "100 TB"], correct: 2, explanation: "Azure Files supports 4 TB files." },
-  { id: 36, question: "What is blob storage used for?", options: ["Structured data", "Unstructured objects (files, videos)", "Databases", "Compute"], correct: 1, explanation: "Blob storage stores unstructured data." },
-  { id: 37, question: "What is Azure Queue Storage?", options: ["File storage", "Message queuing service", "Disk storage", "Archive storage"], correct: 1, explanation: "Queue Storage enables asynchronous messaging." },
-  { id: 38, question: "Maximum blob size?", options: ["1 TB", "2 TB", "4.75 TB", "10 TB"], correct: 2, explanation: "Block blobs support 4.75 TB maximum size." },
-  { id: 39, question: "What is storage account key?", options: ["Username", "Password/authentication credential", "Access token", "Connection string"], correct: 1, explanation: "Storage keys authenticate access to storage accounts." },
-  { id: 40, question: "SAS token used for?", options: ["Authentication", "Secure access with time limit", "Encryption", "Monitoring"], correct: 1, explanation: "SAS (Shared Access Signature) grants temporary access." },
-
-  // Databases (121-150)
-  { id: 41, question: "Best service for relational data?", options: ["Cosmos DB", "Azure SQL Database", "Table Storage", "PostgreSQL"], correct: 1, explanation: "Azure SQL Database is managed relational database." },
-  { id: 42, question: "Main advantage of Cosmos DB?", options: ["Lowest cost", "Global distribution with multi-master", "Relational support", "Best query performance"], correct: 1, explanation: "Cosmos DB provides automatic global replication." },
-  { id: 43, question: "To migrate SQL Server, use?", options: ["SQL Database", "Database for MySQL", "Cosmos DB", "Synapse"], correct: 0, explanation: "Azure SQL Database is managed SQL Server." },
-  { id: 44, question: "What is Azure Database for PostgreSQL?", options: ["Oracle managed service", "PostgreSQL managed service", "NoSQL service", "Data warehouse"], correct: 1, explanation: "Fully managed PostgreSQL with high availability." },
-  { id: 45, question: "SQL Database backup retention?", options: ["7 days", "30 days", "35 days", "90 days"], correct: 2, explanation: "Azure SQL retains backups for 35 days default." },
-  { id: 46, question: "What is Azure Synapse?", options: ["VM service", "Data warehouse and analytics", "Database only", "Compute service"], correct: 1, explanation: "Synapse is analytics and data warehouse service." },
-  { id: 47, question: "Cosmos DB consistency levels?", options: ["2 options", "4 options", "5 options", "Unlimited"], correct: 2, explanation: "5 consistency levels: Strong, Bounded, Session, Prefix, Eventual." },
-  { id: 48, question: "What is Database for MySQL?", options: ["Desktop MySQL", "Managed MySQL service", "MongoDB service", "In-memory database"], correct: 1, explanation: "Fully managed MySQL with automatic backups." },
-  { id: 49, question: "Primary key in Azure database?", options: ["Not required", "Identifies unique records", "Encryption key", "Access key"], correct: 1, explanation: "Primary keys ensure record uniqueness." },
-  { id: 50, question: "What is database replication?", options: ["Making copies", "Backup copies for HA", "Data compression", "Query optimization"], correct: 1, explanation: "Replication creates copies for high availability." },
-
-  // Identity & Access (151-180)
-  { id: 51, question: "Azure AD B2C used for?", options: ["Employee identities", "Customer identities", "Data encryption", "Performance monitoring"], correct: 1, explanation: "B2C authenticates customer/consumer identities." },
-  { id: 52, question: "To grant resource permissions, use?", options: ["Azure AD roles", "Azure RBAC", "Security groups", "NSG rules"], correct: 1, explanation: "RBAC assigns roles at different scopes." },
-  { id: 53, question: "Managed Identity purpose?", options: ["Store passwords", "Authenticate without credentials", "Monitor access", "Encrypt data"], correct: 1, explanation: "Managed Identity enables authentication without managing secrets." },
-  { id: 54, question: "Most secure app authentication?", options: ["Username/password", "API keys", "Service principals with certificates", "Shared keys"], correct: 2, explanation: "Certificates provide strongest security." },
-  { id: 55, question: "To prevent resource deletion, use?", options: ["NSG rules", "RBAC with denials", "Encryption", "Firewall"], correct: 1, explanation: "Denial assignments prevent specific actions." },
-  { id: 56, question: "What is Azure AD?", options: ["Active Directory only", "Directory and identity service", "DNS service", "Networking service"], correct: 1, explanation: "Azure AD manages identities and access." },
-  { id: 57, question: "Service Principal used for?", options: ["User account", "App/service authentication", "Storage", "VMs"], correct: 1, explanation: "Service Principals enable application authentication." },
-  { id: 58, question: "MFA stands for?", options: ["Multi-Factor Authentication", "Multi-File Authorization", "Multi-Firewall Access", "Multi-Function Authorization"], correct: 0, explanation: "MFA requires multiple authentication methods." },
-  { id: 59, question: "Conditional Access used for?", options: ["Store conditions", "Enforce policies based on conditions", "Query database", "Monitor performance"], correct: 1, explanation: "Conditional Access enforces policies like MFA on specific conditions." },
-  { id: 60, question: "What is role inheritance?", options: ["VM copying", "Parent role permissions to child scope", "User copying", "Group management"], correct: 1, explanation: "RBAC roles inherit permissions to child scopes." },
-
-  // Monitoring & Management (181-210)
-  { id: 61, question: "Azure Monitor used for?", options: ["Filter traffic", "Collect/analyze telemetry", "Store backups", "Manage identities"], correct: 1, explanation: "Monitor collects metrics and logs for analysis." },
-  { id: 62, question: "Alert for CPU > 80%, create?", options: ["Log query", "Metric alert", "Action group", "Dashboard"], correct: 1, explanation: "Metric alerts monitor performance thresholds." },
-  { id: 63, question: "Log Analytics used for?", options: ["Store backups", "Query and analyze logs", "Balance traffic", "Encrypt data"], correct: 1, explanation: "Log Analytics queries logs using KQL." },
-  { id: 64, question: "Analyze resource costs, use?", options: ["Azure Advisor", "Azure Monitor", "Cost Management + Billing", "Service Health"], correct: 2, explanation: "Cost Management provides cost analysis." },
-  { id: 65, question: "Azure Advisor recommends?", options: ["Only security", "Best practices across reliability/security/cost", "Only cost", "Only performance"], correct: 1, explanation: "Advisor recommends across 5 categories." },
-  { id: 66, question: "What is Application Insights?", options: ["VM monitoring", "App performance monitoring", "Network monitoring", "Storage monitoring"], correct: 1, explanation: "Application Insights monitors app performance." },
-  { id: 67, question: "Diagnostic settings used for?", options: ["VM diagnostics", "Route logs to storage/event hub", "Security", "Networking"], correct: 1, explanation: "Diagnostic settings configure log destinations." },
-  { id: 68, question: "What is Log Analytics workspace?", options: ["Storage account", "Logs repository and query location", "Virtual machine", "Database"], correct: 1, explanation: "Workspace is the central repository for log data." },
-  { id: 69, question: "KQL stands for?", options: ["Kusto Query Language", "Key Query Language", "Knowledge Query Language", "Keyed Query Language"], correct: 0, explanation: "KQL is used to query logs in Log Analytics." },
-  { id: 70, question: "Action Group used for?", options: ["Group VMs", "Route alert notifications", "Organize resources", "Manage storage"], correct: 1, explanation: "Action Groups define what happens when alerts trigger." },
-
-  // App Services & Containers (211-240)
-  { id: 71, question: "Azure App Service is?", options: ["VM service", "Managed platform for web/mobile apps", "Container service", "Database service"], correct: 1, explanation: "App Service is PaaS for hosting applications." },
-  { id: 72, question: "To containerize app, use?", options: ["App Service", "Container Instances or AKS", "Virtual Machines", "Functions"], correct: 1, explanation: "ACI for simple containers, AKS for orchestration." },
-  { id: 73, question: "Azure Functions used for?", options: ["Host entire apps", "Run event-driven serverless code", "Manage databases", "Balance traffic"], correct: 1, explanation: "Functions run code snippets triggered by events." },
-  { id: 74, question: "Best service for container orchestration?", options: ["Container Instances", "App Service", "Azure Kubernetes Service (AKS)", "Functions"], correct: 2, explanation: "AKS provides enterprise Kubernetes orchestration." },
-  { id: 75, question: "Azure Container Registry used for?", options: ["Host container images", "Monitor performance", "Orchestrate containers", "Encrypt data"], correct: 0, explanation: "ACR stores and manages container images." },
-  { id: 76, question: "What is App Service Plan?", options: ["Storage plan", "Defines app hosting resources", "Backup plan", "Security plan"], correct: 1, explanation: "App Service Plan defines compute resources." },
-  { id: 77, question: "Deployment slots used for?", options: ["Storage slots", "Staging before production", "Network slots", "Database slots"], correct: 1, explanation: "Slots enable staging and swap deployments." },
-  { id: 78, question: "What is WebJob?", options: ["Background task", "Web service", "Job queue", "Trigger"], correct: 0, explanation: "WebJobs run background tasks in App Service." },
-  { id: 79, question: "AKS stands for?", options: ["Azure Kubernetes Service", "Azure Key Service", "Azure Knowledge Service", "Azure Kube Storage"], correct: 0, explanation: "AKS is managed Kubernetes service." },
-  { id: 80, question: "Container image benefits?", options: ["Smaller than VMs", "Lighter weight, portable", "More secure", "Faster networking"], correct: 1, explanation: "Containers are lightweight and portable." },
-
-  // Security (241-250)
-  { id: 81, question: "Azure Key Vault used for?", options: ["Store disks", "Store secrets/keys/certificates", "Monitor access", "Back up data"], correct: 1, explanation: "Key Vault securely stores sensitive data." },
-  { id: 82, question: "To encrypt storage at rest, use?", options: ["Key Vault", "Storage encryption or CMK", "NSG", "Firewall"], correct: 1, explanation: "Storage Service Encryption or Customer-Managed Keys." },
-  { id: 83, question: "Azure Policy used for?", options: ["Filter traffic", "Enforce compliance rules", "Back up data", "Monitor performance"], correct: 1, explanation: "Policy enforces organizational standards." },
-  { id: 84, question: "For security recommendations, use?", options: ["Advisor", "Security Center", "Firewall", "Policy"], correct: 1, explanation: "Security Center provides security recommendations." },
-  { id: 85, question: "Azure DDoS Protection protects against?", options: ["Monitoring", "Distributed denial-of-service attacks", "Data theft", "Encryption"], correct: 1, explanation: "DDoS Protection filters malicious traffic." },
-];
-
-// Shuffle function
-const shuffleArray = (array) => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
+const CATEGORIES = {
+  income: [
+    { id: 'salary', label: 'Salary', color: '#059669', Icon: Briefcase },
+    { id: 'business', label: 'Business', color: '#0d9488', Icon: Landmark },
+    { id: 'investments', label: 'Investments', color: '#2563eb', Icon: TrendingUp },
+    { id: 'gifts', label: 'Gifts', color: '#db2777', Icon: Gift },
+    { id: 'other-income', label: 'Other', color: '#64748b', Icon: MoreHorizontal },
+  ],
+  expense: [
+    { id: 'housing', label: 'Housing', color: '#7c3aed', Icon: Home },
+    { id: 'food', label: 'Food & Dining', color: '#ea580c', Icon: Utensils },
+    { id: 'transport', label: 'Transport', color: '#0284c7', Icon: Car },
+    { id: 'utilities', label: 'Utilities', color: '#ca8a04', Icon: Lightbulb },
+    { id: 'health', label: 'Health', color: '#dc2626', Icon: HeartPulse },
+    { id: 'entertainment', label: 'Entertainment', color: '#9333ea', Icon: Film },
+    { id: 'shopping', label: 'Shopping', color: '#db2777', Icon: ShoppingBag },
+    { id: 'education', label: 'Education', color: '#2563eb', Icon: GraduationCap },
+    { id: 'other-expense', label: 'Other', color: '#64748b', Icon: MoreHorizontal },
+  ],
 };
 
-// Shuffle options in each question
-const prepareQuestions = (questions) => {
-  return questions.map((q) => {
-    const optionsWithIndex = q.options.map((opt, idx) => ({
-      text: opt,
-      originalIndex: idx,
-    }));
-    const shuffledOptions = shuffleArray(optionsWithIndex);
-    const newCorrectIndex = shuffledOptions.findIndex(
-      (opt) => opt.originalIndex === q.correct
-    );
-    return {
-      ...q,
-      options: shuffledOptions.map((opt) => opt.text),
-      correct: newCorrectIndex,
-    };
+const findCategory = (id) =>
+  [...CATEGORIES.income, ...CATEGORIES.expense].find((c) => c.id === id) ||
+  CATEGORIES.expense[CATEGORIES.expense.length - 1];
+
+const fmtMoney = (n) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
+const fmtDate = (iso) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
   });
-};
 
-export default function AZ104ExamApp() {
-  const [questions, setQuestions] = useState(() => prepareQuestions(shuffleArray(AZ104_QUESTIONS)));
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [showResults, setShowResults] = useState(false);
-  const [examComplete, setExamComplete] = useState(false);
+const monthKey = (iso) => iso.slice(0, 7); // "YYYY-MM"
 
-  const currentQuestion = questions[currentIndex];
-  const selectedAnswer = selectedAnswers[currentIndex];
-  const isCorrect = selectedAnswer === currentQuestion.correct;
+const monthLabel = (key) =>
+  new Date(key + '-01T00:00:00').toLocaleDateString('en-US', {
+    month: 'long', year: 'numeric',
+  });
 
-  const handleAnswer = (optionIndex) => {
-    if (!examComplete) {
-      setSelectedAnswers({ ...selectedAnswers, [currentIndex]: optionIndex });
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+function usePersistedState(key, initial) {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : initial;
+    } catch {
+      return initial;
     }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setShowResults(false);
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // storage full or unavailable — app keeps working in memory
     }
+  }, [key, value]);
+  return [value, setValue];
+}
+
+// ---------- Small shared UI ----------
+
+function StatCard({ title, value, sub, Icon, tone }) {
+  const tones = {
+    green: 'bg-emerald-50 text-emerald-600',
+    red: 'bg-rose-50 text-rose-600',
+    blue: 'bg-blue-50 text-blue-600',
+    violet: 'bg-violet-50 text-violet-600',
   };
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-start gap-4">
+      <div className={`p-3 rounded-xl ${tones[tone]}`}>
+        <Icon size={22} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm text-slate-500">{title}</p>
+        <p className="text-2xl font-bold text-slate-800 truncate">{value}</p>
+        {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+      </div>
+    </div>
+  );
+}
 
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setShowResults(false);
-    }
-  };
+function EmptyState({ Icon, title, hint }) {
+  return (
+    <div className="text-center py-12">
+      <Icon size={40} className="mx-auto text-slate-300 mb-3" />
+      <p className="text-slate-600 font-medium">{title}</p>
+      <p className="text-sm text-slate-400 mt-1">{hint}</p>
+    </div>
+  );
+}
 
-  const handleSubmit = () => {
-    setShowResults(true);
-    setExamComplete(true);
-  };
-
-  const handleRestart = () => {
-    setQuestions(prepareQuestions(shuffleArray(AZ104_QUESTIONS)));
-    setCurrentIndex(0);
-    setSelectedAnswers({});
-    setShowResults(false);
-    setExamComplete(false);
-  };
-
-  const score = Object.entries(selectedAnswers).filter(
-    ([idx, ans]) => questions[idx].correct === ans
-  ).length;
-
-  const percentage = ((score / questions.length) * 100).toFixed(1);
-  const passed = percentage >= 70;
-
-  if (examComplete && Object.keys(selectedAnswers).length === questions.length) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className={`text-6xl mb-4 ${passed ? 'text-green-500' : 'text-red-500'}`}>
-            {passed ? '✓' : '✗'}
-          </div>
-          <h1 className="text-3xl font-bold mb-4 text-gray-800">
-            {passed ? 'Congratulations!' : 'Try Again'}
-          </h1>
-          <div className="bg-blue-100 rounded-lg p-6 mb-6">
-            <p className="text-5xl font-bold text-blue-600">{percentage}%</p>
-            <p className="text-gray-600 mt-2">{score} / {questions.length} Correct</p>
-          </div>
-          <p className="text-gray-600 mb-6">
-            {passed
-              ? 'You passed the AZ-104 exam practice! Review the answers and retake to improve.'
-              : 'You scored below 70%. Review the explanations and try again.'}
-          </p>
-          <button
-            onClick={handleRestart}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition"
-          >
-            <RotateCcw className="inline mr-2" size={20} />
-            Retake Exam
+function Modal({ title, onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h3 className="font-semibold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <X size={20} />
           </button>
         </div>
+        <div className="p-6">{children}</div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+const inputCls =
+  'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+const labelCls = 'block text-sm font-medium text-slate-600 mb-1';
+
+// ---------- Charts (inline SVG, no extra dependencies) ----------
+
+function DonutChart({ data }) {
+  // data: [{ label, value, color }]
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) return null;
+  const R = 70;
+  const C = 2 * Math.PI * R;
+  let offset = 0;
+  return (
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      <svg width="180" height="180" viewBox="0 0 180 180" className="shrink-0 -rotate-90">
+        {data.map((d) => {
+          const frac = d.value / total;
+          const seg = (
+            <circle
+              key={d.label}
+              cx="90" cy="90" r={R} fill="none"
+              stroke={d.color} strokeWidth="26"
+              strokeDasharray={`${frac * C} ${C}`}
+              strokeDashoffset={-offset * C}
+            />
+          );
+          offset += frac;
+          return seg;
+        })}
+      </svg>
+      <div className="space-y-2 w-full">
+        {data.map((d) => (
+          <div key={d.label} className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ background: d.color }} />
+            <span className="text-slate-600 flex-1 truncate">{d.label}</span>
+            <span className="font-medium text-slate-800">{fmtMoney(d.value)}</span>
+            <span className="text-slate-400 w-12 text-right">
+              {Math.round((d.value / total) * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrendBars({ months }) {
+  // months: [{ key, income, expense }] oldest → newest
+  const max = Math.max(1, ...months.flatMap((m) => [m.income, m.expense]));
+  return (
+    <div className="flex items-end justify-between gap-3 h-44">
+      {months.map((m) => (
+        <div key={m.key} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+          <div className="flex items-end gap-1 w-full justify-center h-full">
+            <div
+              className="w-3 sm:w-5 rounded-t bg-emerald-500"
+              style={{ height: `${(m.income / max) * 100}%` }}
+              title={`Income ${fmtMoney(m.income)}`}
+            />
+            <div
+              className="w-3 sm:w-5 rounded-t bg-rose-400"
+              style={{ height: `${(m.expense / max) * 100}%` }}
+              title={`Expenses ${fmtMoney(m.expense)}`}
+            />
+          </div>
+          <span className="text-xs text-slate-400">
+            {new Date(m.key + '-01T00:00:00').toLocaleDateString('en-US', { month: 'short' })}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------- Transaction form ----------
+
+function TransactionForm({ initial, onSave, onClose }) {
+  const [type, setType] = useState(initial?.type || 'expense');
+  const [amount, setAmount] = useState(initial?.amount ?? '');
+  const [category, setCategory] = useState(initial?.category || '');
+  const [description, setDescription] = useState(initial?.description || '');
+  const [date, setDate] = useState(initial?.date || todayISO());
+
+  const cats = CATEGORIES[type];
+  const valid = Number(amount) > 0 && category && date;
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!valid) return;
+    onSave({
+      id: initial?.id || uid(),
+      type,
+      amount: Number(amount),
+      category,
+      description: description.trim(),
+      date,
+    });
+    onClose();
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-t-xl shadow-lg p-6 mb-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-blue-600 flex items-center gap-2">
-                <BookOpen size={32} />
-                AZ-104 Exam
-              </h1>
-              <p className="text-gray-600 mt-2">Microsoft Azure Administrator</p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-600">
-                {currentIndex + 1} / {questions.length}
-              </p>
-              <div className="bg-gray-200 rounded-full h-2 w-64 mt-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Question */}
-        <div className="bg-white p-8 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            {currentQuestion.question}
-          </h2>
-
-          {/* Options */}
-          <div className="space-y-3">
-            {currentQuestion.options.map((option, idx) => {
-              const isSelected = selectedAnswer === idx;
-              const isAnswered = selectedAnswer !== undefined;
-              const showCorrect = showResults && idx === currentQuestion.correct;
-              const showWrong = showResults && isSelected && !isCorrect;
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleAnswer(idx)}
-                  disabled={examComplete}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition font-semibold
-                    ${
-                      showCorrect
-                        ? 'bg-green-100 border-green-500 text-green-800'
-                        : showWrong
-                        ? 'bg-red-100 border-red-500 text-red-800'
-                        : isSelected
-                        ? 'bg-blue-100 border-blue-500 text-blue-800'
-                        : 'bg-gray-50 border-gray-300 text-gray-800 hover:bg-gray-100'
-                    }
-                    ${examComplete && !isSelected && !showCorrect ? 'opacity-50' : ''}
-                  `}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{option}</span>
-                    {showCorrect && <CheckCircle className="text-green-600" />}
-                    {showWrong && <XCircle className="text-red-600" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Explanation */}
-        {showResults && (
-          <div className="bg-blue-50 p-6 border-b border-gray-200">
-            <h3 className="font-bold text-blue-900 mb-2">Explanation:</h3>
-            <p className="text-blue-800">{currentQuestion.explanation}</p>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <div className="bg-white rounded-b-xl shadow-lg p-6 flex justify-between items-center">
+    <form onSubmit={submit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        {['expense', 'income'].map((t) => (
           <button
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            className="flex items-center gap-2 bg-gray-300 hover:bg-gray-400 disabled:opacity-50 text-gray-800 font-bold py-2 px-4 rounded-lg transition"
+            key={t}
+            type="button"
+            onClick={() => { setType(t); setCategory(''); }}
+            className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+              type === t
+                ? t === 'expense'
+                  ? 'bg-rose-50 border-rose-300 text-rose-600'
+                  : 'bg-emerald-50 border-emerald-300 text-emerald-600'
+                : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
           >
-            <ChevronLeft size={20} />
-            Previous
+            {t === 'expense' ? 'Expense' : 'Income'}
           </button>
-
-          {selectedAnswer !== undefined && (
+        ))}
+      </div>
+      <div>
+        <label className={labelCls}>Amount</label>
+        <input
+          type="number" min="0.01" step="0.01" required autoFocus
+          value={amount} onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00" className={inputCls}
+        />
+      </div>
+      <div>
+        <label className={labelCls}>Category</label>
+        <div className="grid grid-cols-3 gap-2">
+          {cats.map(({ id, label, Icon }) => (
             <button
-              onClick={() => setShowResults(!showResults)}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition"
+              key={id} type="button" onClick={() => setCategory(id)}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-colors ${
+                category === id
+                  ? 'border-blue-400 bg-blue-50 text-blue-700'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
             >
-              {showResults ? 'Hide' : 'Show'} Explanation
+              <Icon size={16} />
+              {label}
             </button>
-          )}
-
-          {currentIndex < questions.length - 1 ? (
-            <button
-              onClick={handleNext}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition"
-            >
-              Next
-              <ChevronRight size={20} />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={Object.keys(selectedAnswers).length !== questions.length}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg transition"
-            >
-              Submit Exam
-              <CheckCircle size={20} />
-            </button>
-          )}
-        </div>
-
-        {/* Question Overview */}
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6">
-          <h3 className="font-bold text-gray-800 mb-4">Question Overview:</h3>
-          <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
-            {questions.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setCurrentIndex(idx);
-                  setShowResults(false);
-                }}
-                className={`p-2 rounded-lg font-semibold transition
-                  ${idx === currentIndex ? 'bg-blue-600 text-white ring-2 ring-blue-800' : 
-                    selectedAnswers[idx] !== undefined ? 'bg-green-200 text-green-800' : 
-                    'bg-gray-200 text-gray-800 hover:bg-gray-300'}
-                `}
-              >
-                {idx + 1}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
+      <div>
+        <label className={labelCls}>Description</label>
+        <input
+          type="text" value={description} onChange={(e) => setDescription(e.target.value)}
+          placeholder="Optional note" className={inputCls}
+        />
+      </div>
+      <div>
+        <label className={labelCls}>Date</label>
+        <input
+          type="date" required value={date} onChange={(e) => setDate(e.target.value)}
+          className={inputCls}
+        />
+      </div>
+      <button
+        type="submit" disabled={!valid}
+        className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {initial ? 'Save Changes' : 'Add Transaction'}
+      </button>
+    </form>
+  );
+}
+
+function TransactionRow({ tx, onEdit, onDelete }) {
+  const cat = findCategory(tx.category);
+  const { Icon } = cat;
+  return (
+    <div className="flex items-center gap-3 py-3 group">
+      <div className="p-2.5 rounded-xl shrink-0" style={{ background: cat.color + '18', color: cat.color }}>
+        <Icon size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-800 truncate">
+          {tx.description || cat.label}
+        </p>
+        <p className="text-xs text-slate-400">{cat.label} · {fmtDate(tx.date)}</p>
+      </div>
+      <span className={`text-sm font-semibold ${tx.type === 'income' ? 'text-emerald-600' : 'text-slate-800'}`}>
+        {tx.type === 'income' ? '+' : '−'}{fmtMoney(tx.amount)}
+      </span>
+      {onEdit && (
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onEdit(tx)} className="p-1.5 text-slate-400 hover:text-blue-600" aria-label="Edit">
+            <Pencil size={15} />
+          </button>
+          <button onClick={() => onDelete(tx.id)} className="p-1.5 text-slate-400 hover:text-rose-600" aria-label="Delete">
+            <Trash2 size={15} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Views ----------
+
+function Dashboard({ transactions, month, setMonth }) {
+  const monthTx = transactions.filter((t) => monthKey(t.date) === month);
+  const income = monthTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expenses = monthTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const balance = transactions.reduce(
+    (s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0
+  );
+  const savingsRate = income > 0 ? Math.round(((income - expenses) / income) * 100) : null;
+
+  const byCategory = useMemo(() => {
+    const map = {};
+    monthTx.filter((t) => t.type === 'expense').forEach((t) => {
+      map[t.category] = (map[t.category] || 0) + t.amount;
+    });
+    return Object.entries(map)
+      .map(([id, value]) => {
+        const cat = findCategory(id);
+        return { label: cat.label, color: cat.color, value };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [transactions, month]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const trend = useMemo(() => {
+    const base = new Date(month + '-01T00:00:00');
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(base.getFullYear(), base.getMonth() - (5 - i), 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const txs = transactions.filter((t) => monthKey(t.date) === key);
+      return {
+        key,
+        income: txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+        expense: txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+      };
+    });
+  }, [transactions, month]);
+
+  const shiftMonth = (delta) => {
+    const d = new Date(month + '-01T00:00:00');
+    d.setMonth(d.getMonth() + delta);
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  };
+
+  const recent = [...monthTx].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-800">Overview</h2>
+        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2 py-1">
+          <button onClick={() => shiftMonth(-1)} className="p-1 text-slate-400 hover:text-slate-700" aria-label="Previous month">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-sm font-medium text-slate-700 w-32 text-center">{monthLabel(month)}</span>
+          <button onClick={() => shiftMonth(1)} className="p-1 text-slate-400 hover:text-slate-700" aria-label="Next month">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Total Balance" value={fmtMoney(balance)} sub="All time" Icon={Wallet} tone="blue" />
+        <StatCard title="Income" value={fmtMoney(income)} sub={monthLabel(month)} Icon={TrendingUp} tone="green" />
+        <StatCard title="Expenses" value={fmtMoney(expenses)} sub={monthLabel(month)} Icon={TrendingDown} tone="red" />
+        <StatCard
+          title="Savings Rate"
+          value={savingsRate === null ? '—' : `${savingsRate}%`}
+          sub={savingsRate === null ? 'No income this month' : 'Of monthly income'}
+          Icon={PiggyBank} tone="violet"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <h3 className="font-semibold text-slate-800 mb-4">Spending by Category</h3>
+          {byCategory.length ? (
+            <DonutChart data={byCategory} />
+          ) : (
+            <EmptyState Icon={DollarSign} title="No expenses this month" hint="Add a transaction to see the breakdown." />
+          )}
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-800">6-Month Trend</h3>
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Income</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400" /> Expenses</span>
+            </div>
+          </div>
+          <TrendBars months={trend} />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h3 className="font-semibold text-slate-800 mb-2">Recent Transactions</h3>
+        {recent.length ? (
+          <div className="divide-y divide-slate-50">
+            {recent.map((tx) => <TransactionRow key={tx.id} tx={tx} />)}
+          </div>
+        ) : (
+          <EmptyState Icon={ArrowLeftRight} title="Nothing recorded yet" hint="Use the “Add Transaction” button to get started." />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Transactions({ transactions, onEdit, onDelete }) {
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [...transactions]
+      .filter((t) => typeFilter === 'all' || t.type === typeFilter)
+      .filter((t) =>
+        !q ||
+        t.description.toLowerCase().includes(q) ||
+        findCategory(t.category).label.toLowerCase().includes(q)
+      )
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [transactions, query, typeFilter]);
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((t) => {
+      const k = monthKey(t.date);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(t);
+    });
+    return [...map.entries()];
+  }, [filtered]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search description or category…"
+            className={`${inputCls} pl-9`}
+          />
+        </div>
+        <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white">
+          {['all', 'income', 'expense'].map((t) => (
+            <button
+              key={t} onClick={() => setTypeFilter(t)}
+              className={`px-4 py-2 text-sm capitalize ${
+                typeFilter === t ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {grouped.length ? (
+        grouped.map(([key, txs]) => (
+          <div key={key} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <h3 className="font-semibold text-slate-800 mb-2">{monthLabel(key)}</h3>
+            <div className="divide-y divide-slate-50">
+              {txs.map((tx) => (
+                <TransactionRow key={tx.id} tx={tx} onEdit={onEdit} onDelete={onDelete} />
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+          <EmptyState
+            Icon={ArrowLeftRight}
+            title={transactions.length ? 'No matching transactions' : 'No transactions yet'}
+            hint={transactions.length ? 'Try a different search or filter.' : 'Add your first income or expense to get started.'}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Budgets({ transactions, budgets, setBudgets, month }) {
+  const [editing, setEditing] = useState(null); // category id
+  const [draft, setDraft] = useState('');
+
+  const spentFor = (catId) =>
+    transactions
+      .filter((t) => t.type === 'expense' && t.category === catId && monthKey(t.date) === month)
+      .reduce((s, t) => s + t.amount, 0);
+
+  const save = (catId) => {
+    const n = Number(draft);
+    setBudgets((b) => {
+      const next = { ...b };
+      if (n > 0) next[catId] = n;
+      else delete next[catId];
+      return next;
+    });
+    setEditing(null);
+  };
+
+  const totalBudget = Object.values(budgets).reduce((s, n) => s + n, 0);
+  const totalSpent = CATEGORIES.expense.reduce(
+    (s, c) => s + (budgets[c.id] ? spentFor(c.id) : 0), 0
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-800">Budgets · {monthLabel(month)}</h2>
+        {totalBudget > 0 && (
+          <span className="text-sm text-slate-500">
+            {fmtMoney(totalSpent)} of {fmtMoney(totalBudget)} budgeted
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {CATEGORIES.expense.map((cat) => {
+          const { Icon } = cat;
+          const limit = budgets[cat.id];
+          const spent = spentFor(cat.id);
+          const pct = limit ? Math.min(100, (spent / limit) * 100) : 0;
+          const over = limit && spent > limit;
+          const near = limit && !over && spent >= limit * 0.8;
+          return (
+            <div key={cat.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-xl" style={{ background: cat.color + '18', color: cat.color }}>
+                  <Icon size={18} />
+                </div>
+                <span className="font-medium text-slate-800 flex-1">{cat.label}</span>
+                {editing === cat.id ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number" min="0" step="1" autoFocus value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && save(cat.id)}
+                      className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button onClick={() => save(cat.id)} className="text-blue-600 text-sm font-medium">Save</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setEditing(cat.id); setDraft(limit || ''); }}
+                    className="text-sm text-slate-400 hover:text-blue-600 flex items-center gap-1"
+                  >
+                    <Pencil size={13} />
+                    {limit ? fmtMoney(limit) : 'Set limit'}
+                  </button>
+                )}
+              </div>
+              {limit ? (
+                <>
+                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        over ? 'bg-rose-500' : near ? 'bg-amber-400' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-2 text-xs">
+                    <span className="text-slate-500">{fmtMoney(spent)} spent</span>
+                    {over ? (
+                      <span className="flex items-center gap-1 text-rose-600 font-medium">
+                        <AlertTriangle size={12} /> {fmtMoney(spent - limit)} over
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <CheckCircle size={12} /> {fmtMoney(limit - spent)} left
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-slate-400">
+                  No budget set{spent > 0 && ` · ${fmtMoney(spent)} spent this month`}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Goals({ goals, setGoals }) {
+  const [showForm, setShowForm] = useState(false);
+  const [contributing, setContributing] = useState(null); // goal id
+  const [contribAmount, setContribAmount] = useState('');
+  const [name, setName] = useState('');
+  const [target, setTarget] = useState('');
+  const [saved, setSaved] = useState('');
+
+  const addGoal = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !(Number(target) > 0)) return;
+    setGoals((g) => [
+      ...g,
+      { id: uid(), name: name.trim(), target: Number(target), saved: Number(saved) || 0 },
+    ]);
+    setName(''); setTarget(''); setSaved(''); setShowForm(false);
+  };
+
+  const contribute = (id) => {
+    const n = Number(contribAmount);
+    if (n > 0) {
+      setGoals((g) => g.map((goal) =>
+        goal.id === id ? { ...goal, saved: goal.saved + n } : goal
+      ));
+    }
+    setContributing(null);
+    setContribAmount('');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-800">Savings Goals</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+        >
+          <Plus size={16} /> New Goal
+        </button>
+      </div>
+
+      {goals.length ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {goals.map((goal) => {
+            const pct = Math.min(100, (goal.saved / goal.target) * 100);
+            const done = goal.saved >= goal.target;
+            return (
+              <div key={goal.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`p-2 rounded-xl ${done ? 'bg-emerald-50 text-emerald-600' : 'bg-violet-50 text-violet-600'}`}>
+                    {done ? <CheckCircle size={18} /> : <Target size={18} />}
+                  </div>
+                  <span className="font-medium text-slate-800 flex-1">{goal.name}</span>
+                  <button
+                    onClick={() => setGoals((g) => g.filter((x) => x.id !== goal.id))}
+                    className="text-slate-300 hover:text-rose-500" aria-label="Delete goal"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${done ? 'bg-emerald-500' : 'bg-violet-500'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-sm">
+                  <span className="text-slate-500">
+                    {fmtMoney(goal.saved)} of {fmtMoney(goal.target)}
+                  </span>
+                  <span className={`font-medium ${done ? 'text-emerald-600' : 'text-slate-700'}`}>
+                    {done ? 'Reached! 🎉' : `${Math.round(pct)}%`}
+                  </span>
+                </div>
+                {!done && (
+                  contributing === goal.id ? (
+                    <div className="flex gap-2 mt-3">
+                      <input
+                        type="number" min="0.01" step="0.01" autoFocus
+                        value={contribAmount}
+                        onChange={(e) => setContribAmount(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && contribute(goal.id)}
+                        placeholder="Amount" className={inputCls}
+                      />
+                      <button
+                        onClick={() => contribute(goal.id)}
+                        className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setContributing(goal.id)}
+                      className="mt-3 w-full py-2 border border-violet-200 text-violet-600 text-sm font-medium rounded-lg hover:bg-violet-50"
+                    >
+                      + Add contribution
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+          <EmptyState
+            Icon={Target}
+            title="No savings goals yet"
+            hint="Create a goal like “Emergency Fund” or “Vacation” and track your progress."
+          />
+        </div>
+      )}
+
+      {showForm && (
+        <Modal title="New Savings Goal" onClose={() => setShowForm(false)}>
+          <form onSubmit={addGoal} className="space-y-4">
+            <div>
+              <label className={labelCls}>Goal name</label>
+              <input
+                type="text" required autoFocus value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Emergency Fund" className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Target amount</label>
+              <input
+                type="number" min="1" step="0.01" required value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="5000" className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Already saved (optional)</label>
+              <input
+                type="number" min="0" step="0.01" value={saved}
+                onChange={(e) => setSaved(e.target.value)}
+                placeholder="0" className={inputCls}
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
+            >
+              Create Goal
+            </button>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ---------- App shell ----------
+
+const TABS = [
+  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'transactions', label: 'Transactions', Icon: ArrowLeftRight },
+  { id: 'budgets', label: 'Budgets', Icon: PiggyBank },
+  { id: 'goals', label: 'Goals', Icon: Target },
+];
+
+export default function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [transactions, setTransactions] = usePersistedState('finance.transactions', []);
+  const [budgets, setBudgets] = usePersistedState('finance.budgets', {});
+  const [goals, setGoals] = usePersistedState('finance.goals', []);
+  const [month, setMonth] = useState(() => todayISO().slice(0, 7));
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+
+  const saveTx = (tx) => {
+    setTransactions((txs) => {
+      const exists = txs.some((t) => t.id === tx.id);
+      return exists ? txs.map((t) => (t.id === tx.id ? tx : t)) : [...txs, tx];
+    });
+  };
+
+  const deleteTx = (id) => setTransactions((txs) => txs.filter((t) => t.id !== id));
+
+  const openEdit = (tx) => { setEditingTx(tx); setFormOpen(true); };
+  const closeForm = () => { setFormOpen(false); setEditingTx(null); };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-blue-600 rounded-xl text-white">
+                <Wallet size={20} />
+              </div>
+              <div>
+                <h1 className="font-bold text-slate-800 leading-tight">FinTrack</h1>
+                <p className="text-xs text-slate-400 leading-tight">Personal finance manager</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setFormOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Add Transaction</span>
+              <span className="sm:hidden">Add</span>
+            </button>
+          </div>
+          <nav className="flex gap-1 -mb-px overflow-x-auto">
+            {TABS.map(({ id, label, Icon }) => (
+              <button
+                key={id} onClick={() => setTab(id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                  tab === id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {tab === 'dashboard' && (
+          <Dashboard transactions={transactions} month={month} setMonth={setMonth} />
+        )}
+        {tab === 'transactions' && (
+          <Transactions transactions={transactions} onEdit={openEdit} onDelete={deleteTx} />
+        )}
+        {tab === 'budgets' && (
+          <Budgets transactions={transactions} budgets={budgets} setBudgets={setBudgets} month={month} />
+        )}
+        {tab === 'goals' && <Goals goals={goals} setGoals={setGoals} />}
+      </main>
+
+      {formOpen && (
+        <Modal title={editingTx ? 'Edit Transaction' : 'Add Transaction'} onClose={closeForm}>
+          <TransactionForm initial={editingTx} onSave={saveTx} onClose={closeForm} />
+        </Modal>
+      )}
     </div>
   );
 }

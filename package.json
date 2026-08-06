@@ -1,7 +1,7 @@
 {
-  "name": "az104-measureup-exam",
+  "name": "fintrack",
   "version": "1.0.0",
-  "description": "AZ-104 Azure Administrator Exam Practice - 250 Questions",
+  "description": "FinTrack - Personal Financial Management App: track income, expenses, budgets and savings goals",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
