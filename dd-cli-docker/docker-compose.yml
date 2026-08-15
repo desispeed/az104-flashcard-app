@@ -1,0 +1,13 @@
+services:
+  dd-cli:
+    build: .
+    image: dd-cli:0.2.2
+    # dd-cli is a CLI, not a long-running server. Compose is here mainly to
+    # build the image and to inject the token. Run one-off commands with:
+    #   docker compose run --rm dd-cli --json-output find-nearby-stores ...
+    environment:
+      # Obtain on a DESKTOP: `dd-cli login` then `dd-cli export-token`,
+      # and put the value in a local .env file (never commit it).
+      - DD_CLI_ACCESS_TOKEN=${DD_CLI_ACCESS_TOKEN}
+    # No ports: nothing to expose. The container only makes outbound calls.
+    # Override the entrypoint's default (--help) at run time.
