@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "autonomad-travel": {
+      "command": "npx",
+      "args": ["-y", "autonomad-travel"],
+      "env": {
+        "BOOKING_API_URL": "https://api.autonomad.ai",
+        "IDENTITY_API_URL": "https://api.autonomad.ai",
+        "REWARD_API_URL": "https://api.autonomad.ai"
+      }
+    }
+  }
+}
